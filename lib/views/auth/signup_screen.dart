@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/auth_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -14,9 +15,11 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _confirmPasswordController =
   TextEditingController();
 
+  final AuthService _authService = AuthService();
+
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  bool _agreeToTerms = true;
+  bool _isLoading = false;
 
   static const Color background = Color(0xFFFCF8EF);
   static const Color gold = Color(0xFFD9AA2B);
@@ -42,7 +45,7 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  void _createAccount() {
+  Future<void> _createAccount() async {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text;
@@ -75,18 +78,40 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
 
-    if (!_agreeToTerms) {
-      _showMessage(
-        'Please agree to the Terms of Service and Privacy Policy.',
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _authService.signup(
+        name: name,
+        email: email,
+        password: password,
+        confirmPassword: confirmPassword,
       );
-      return;
+
+      if (!mounted) return;
+
+      _showMessage('Account created successfully. Please log in.');
+
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/login',
+            (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      _showMessage(
+        e.toString().replaceFirst('Exception: ', ''),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
-
-    _showMessage('Connect your authentication controller to create an account.');
-  }
-
-  void _googleSignUp() {
-    _showMessage('Connect Google Sign-In to continue.');
   }
 
   @override
@@ -94,155 +119,114 @@ class _SignupScreenState extends State<SignupScreen> {
     return Scaffold(
       backgroundColor: background,
       body: SafeArea(
-        child: Column(
-          children: [
-            Container(
-              height: 76,
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              decoration: const BoxDecoration(
-                color: background,
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0x08000000),
-                    blurRadius: 8,
-                    offset: Offset(0, 3),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            children: [
+              const SizedBox(height: 30),
+              Center(
+                child: Container(
+                  width: 108,
+                  height: 108,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF7F3E9),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.brown.withValues(alpha: 0.05),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () => Navigator.maybePop(context),
-                    icon: const Icon(
-                      Icons.arrow_back,
-                      size: 26,
-                      color: textColor,
-                    ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                  const Expanded(
-                    child: Center(
-                      child: Text(
-                        'Sign Up',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          color: textColor,
-                          letterSpacing: -0.4,
+                  child: Center(
+                    child: Container(
+                      width: 86,
+                      height: 86,
+                      decoration: BoxDecoration(
+                        color: gold,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.brown.withValues(alpha: 0.13),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Text(
+                          '₹',
+                          style: TextStyle(
+                            fontSize: 46,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF705000),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 26),
-                ],
+                ),
               ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+              const SizedBox(height: 18),
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEDE8DF),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: const Text(
+                    'DAILYDHAN',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: secondaryText,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Create Your Account',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: textColor,
+                  letterSpacing: -0.6,
+                  height: 1.2,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Center(
-                      child: Container(
-                        width: 108,
-                        height: 108,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF7F3E9),
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.brown.withValues(alpha: 0.05),
-                              blurRadius: 8,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: Container(
-                            width: 86,
-                            height: 86,
-                            decoration: BoxDecoration(
-                              color: gold,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.brown.withValues(alpha: 0.13),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: const Center(
-                              child: Text(
-                                '₹',
-                                style: TextStyle(
-                                  fontSize: 46,
-                                  fontWeight: FontWeight.w500,
-                                  color: Color(0xFF705000),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    Center(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 7,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEDE8DF),
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        child: const Text(
-                          'DAILYDHAN',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: secondaryText,
-                            letterSpacing: 0.4,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      'Create Your Account',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        color: textColor,
-                        letterSpacing: -0.6,
-                        height: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 26),
                     _buildLabel('Full Name'),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     _buildInput(
                       controller: _nameController,
                       hint: 'Enter your full name',
                       icon: Icons.person_outline,
                       textCapitalization: TextCapitalization.words,
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 12),
                     _buildLabel('Email Address'),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     _buildInput(
                       controller: _emailController,
                       hint: 'Enter your email',
                       icon: Icons.mail_outline,
                       keyboardType: TextInputType.emailAddress,
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 12),
                     _buildLabel('Password'),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     _buildInput(
                       controller: _passwordController,
                       hint: 'Create strong password',
@@ -263,7 +247,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 6),
                     const Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -288,9 +272,9 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 12),
                     _buildLabel('Confirm Password'),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     _buildInput(
                       controller: _confirmPasswordController,
                       hint: 'Re-enter your password',
@@ -312,111 +296,31 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: Checkbox(
-                            value: _agreeToTerms,
-                            onChanged: (value) {
-                              setState(() {
-                                _agreeToTerms = value ?? false;
-                              });
-                            },
-                            activeColor: darkGold,
-                            checkColor: Colors.white,
-                            side: const BorderSide(
-                              color: darkGold,
-                              width: 1.5,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                            materialTapTargetSize:
-                            MaterialTapTargetSize.shrinkWrap,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Wrap(
-                            children: [
-                              const Text(
-                                "I agree to DailyDhan's ",
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: secondaryText,
-                                  height: 1.5,
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: () => Navigator.pushNamed(
-                                  context,
-                                  '/terms',
-                                ),
-                                child: const Text(
-                                  'Terms of Service',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: darkGold,
-                                    decoration: TextDecoration.underline,
-                                    decorationColor: darkGold,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                              const Text(
-                                ' and ',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: secondaryText,
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: () => Navigator.pushNamed(
-                                  context,
-                                  '/privacy',
-                                ),
-                                child: const Text(
-                                  'Privacy Policy',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: darkGold,
-                                    decoration: TextDecoration.underline,
-                                    decorationColor: darkGold,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                              const Text(
-                                '.',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: secondaryText,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
                     SizedBox(
                       height: 58,
                       child: ElevatedButton(
-                        onPressed: _createAccount,
+                        onPressed: _isLoading ? null : _createAccount,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: gold,
                           foregroundColor: const Color(0xFF624900),
                           elevation: 3,
-                          shadowColor: Colors.brown.withValues(alpha: 0.16),
+                          shadowColor:
+                          Colors.brown.withValues(alpha: 0.16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(32),
                           ),
                         ),
-                        child: const Row(
+                        child: _isLoading
+                            ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Color(0xFF624900),
+                          ),
+                        )
+                            : const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
@@ -433,69 +337,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 22),
-                    const Row(
-                      children: [
-                        Expanded(
-                          child: Divider(
-                            color: Color(0xFFE5DED1),
-                            thickness: 1.2,
-                          ),
-                        ),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-                          child: Text(
-                            'OR SIGN UP WITH',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: iconColor,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Divider(
-                            color: Color(0xFFE5DED1),
-                            thickness: 1.2,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 18),
-                    SizedBox(
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _googleSignUp,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: inputBackground,
-                          foregroundColor: textColor,
-                          elevation: 1,
-                          shadowColor: Colors.brown.withValues(alpha: 0.06),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            side: const BorderSide(
-                              color: Color(0xFFEDE6D9),
-                            ),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _googleLogo(),
-                            const SizedBox(width: 12),
-                            const Text(
-                              'Continue with Google',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
+                    const Spacer(),
                     Wrap(
                       alignment: WrapAlignment.center,
                       crossAxisAlignment: WrapCrossAlignment.center,
@@ -508,10 +350,9 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                         ),
                         GestureDetector(
-                          onTap: () => Navigator.pushNamed(
-                            context,
-                            '/login',
-                          ),
+                          onTap: () {
+                            Navigator.pushNamed(context, '/login');
+                          },
                           child: const Text(
                             'Login',
                             style: TextStyle(
@@ -523,11 +364,12 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 12),
                   ],
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -594,24 +436,6 @@ class _SignupScreenState extends State<SignupScreen> {
           ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 18),
-        ),
-      ),
-    );
-  }
-
-  Widget _googleLogo() {
-    return const SizedBox(
-      width: 24,
-      height: 24,
-      child: Center(
-        child: Text(
-          'G',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF4285F4),
-            height: 1,
-          ),
         ),
       ),
     );

@@ -26,25 +26,9 @@ class _AccountsScreenState extends State<AccountsScreen> {
   static const Color incomeColor = Color(0xFF6EAA91);
   static const Color expenseColor = Color(0xFFE98270);
 
-  static const String _accountsStorageKey =
-      'dailydhan_custom_accounts';
+  static const String _accountsStorageKey = 'dailydhan_custom_accounts';
 
   static const double _accountSpacing = 12;
-
-  static const List<IconData> _accountIcons = [
-    Icons.payments_outlined,
-    Icons.credit_card_rounded,
-    Icons.chat_bubble_rounded,
-    Icons.account_balance_outlined,
-    Icons.savings_outlined,
-    Icons.wallet_outlined,
-    Icons.account_balance_wallet_outlined,
-    Icons.currency_exchange_rounded,
-    Icons.storefront_outlined,
-    Icons.work_outline_rounded,
-    Icons.attach_money_rounded,
-    Icons.account_box_outlined,
-  ];
 
   final TransactionService _transactionService = TransactionService();
 
@@ -80,8 +64,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
 
   Future<void> _loadTransactions() async {
     try {
-      final transactions =
-      await _transactionService.getTransactions();
+      final transactions = await _transactionService.getTransactions();
 
       if (!mounted) return;
 
@@ -104,8 +87,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
     try {
       final preferences = await SharedPreferences.getInstance();
 
-      final savedAccounts =
-      preferences.getString(_accountsStorageKey);
+      final savedAccounts = preferences.getString(_accountsStorageKey);
 
       if (savedAccounts == null) return;
 
@@ -127,27 +109,11 @@ class _AccountsScreenState extends State<AccountsScreen> {
     }
   }
 
-  Future<void> _persistCustomAccounts(
-      List<Map<String, dynamic>> accounts,
-      ) async {
-    final preferences = await SharedPreferences.getInstance();
-
-    final saved = await preferences.setString(
-      _accountsStorageKey,
-      jsonEncode(accounts),
-    );
-
-    if (!saved) {
-      throw Exception('Unable to save accounts locally.');
-    }
-  }
-
   double _balanceFor(String accountType) {
     double balance = 0;
 
     for (final transaction in _transactions) {
-      if ((transaction.accountId ?? '').toLowerCase() !=
-          accountType) {
+      if ((transaction.accountId ?? '').toLowerCase() != accountType) {
         continue;
       }
 
@@ -169,8 +135,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
     return _customAccounts.fold<double>(
       0,
           (total, account) =>
-      total +
-          ((account['initialAmount'] as num?)?.toDouble() ?? 0),
+      total + ((account['initialAmount'] as num?)?.toDouble() ?? 0),
     );
   }
 
@@ -199,443 +164,25 @@ class _AccountsScreenState extends State<AccountsScreen> {
       }
     }
 
-    return '${amount < 0 ? '-' : ''}'
-        '${buffer.toString()}.$decimalPart';
+    return '${amount < 0 ? '-' : ''}${buffer.toString()}.$decimalPart';
   }
 
   String _formatRupees(double amount) {
     return '₹${_formatAmount(amount).replaceAll('.00', '')}';
   }
 
-  Future<void> _showAddAccountDialog() async {
-    HapticFeedback.selectionClick();
+  Future<void> _persistCustomAccounts(
+      List<Map<String, dynamic>> accounts,
+      ) async {
+    final preferences = await SharedPreferences.getInstance();
 
-    final nameController = TextEditingController(text: 'Untitled');
-    final amountController = TextEditingController(text: '0');
+    final saved = await preferences.setString(
+      _accountsStorageKey,
+      jsonEncode(accounts),
+    );
 
-    int selectedIconIndex = 0;
-    bool isSaving = false;
-
-    try {
-      await showDialog<void>(
-        context: context,
-        builder: (dialogContext) {
-          return StatefulBuilder(
-            builder: (context, setDialogState) {
-              return Dialog(
-                backgroundColor: cardColor,
-                insetPadding:
-                const EdgeInsets.symmetric(horizontal: 24),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(22),
-                  side: const BorderSide(color: dividerColor),
-                ),
-                child: SizedBox(
-                  width: 300,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      18,
-                      18,
-                      18,
-                      14,
-                    ),
-                    child: SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Center(
-                            child: Text(
-                              'Add new account',
-                              style: TextStyle(
-                                color: textColor,
-                                fontSize: 19,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Row(
-                            children: [
-                              const Expanded(
-                                flex: 5,
-                                child: Text(
-                                  'Initial amount',
-                                  style: TextStyle(
-                                    color: textColor,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                flex: 6,
-                                child: TextField(
-                                  controller: amountController,
-                                  keyboardType:
-                                  const TextInputType
-                                      .numberWithOptions(
-                                    decimal: true,
-                                  ),
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.allow(
-                                      RegExp(r'^\d*\.?\d{0,2}'),
-                                    ),
-                                  ],
-                                  onTap: () {
-                                    if (amountController.text == '0') {
-                                      amountController.selection =
-                                          TextSelection(
-                                            baseOffset: 0,
-                                            extentOffset:
-                                            amountController.text.length,
-                                          );
-                                    }
-                                  },
-                                  style: const TextStyle(
-                                    color: textColor,
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                  decoration: InputDecoration(
-                                    filled: true,
-                                    fillColor: background,
-                                    contentPadding:
-                                    const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 12,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius:
-                                      BorderRadius.circular(12),
-                                      borderSide: const BorderSide(
-                                        color: dividerColor,
-                                      ),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius:
-                                      BorderRadius.circular(12),
-                                      borderSide: const BorderSide(
-                                        color: dividerColor,
-                                      ),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius:
-                                      BorderRadius.circular(12),
-                                      borderSide: const BorderSide(
-                                        color: gold,
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            '*Initial amount is separate from transaction analysis',
-                            style: TextStyle(
-                              color: muted,
-                              fontSize: 11,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Row(
-                            children: [
-                              const Expanded(
-                                flex: 4,
-                                child: Text(
-                                  'Name',
-                                  style: TextStyle(
-                                    color: textColor,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                flex: 6,
-                                child: TextField(
-                                  controller: nameController,
-                                  textCapitalization:
-                                  TextCapitalization.words,
-                                  style: const TextStyle(
-                                    color: textColor,
-                                    fontSize: 13,
-                                  ),
-                                  decoration: InputDecoration(
-                                    filled: true,
-                                    fillColor: background,
-                                    contentPadding:
-                                    const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 10,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius:
-                                      BorderRadius.circular(12),
-                                      borderSide: const BorderSide(
-                                        color: dividerColor,
-                                      ),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius:
-                                      BorderRadius.circular(12),
-                                      borderSide: const BorderSide(
-                                        color: dividerColor,
-                                      ),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius:
-                                      BorderRadius.circular(12),
-                                      borderSide: const BorderSide(
-                                        color: gold,
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 18),
-                          const Text(
-                            'Icon',
-                            style: TextStyle(
-                              color: textColor,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Container(
-                            height: 78,
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: background,
-                              borderRadius: BorderRadius.circular(15),
-                              border: Border.all(color: dividerColor),
-                            ),
-                            child: ListView.separated(
-                              scrollDirection: Axis.horizontal,
-                              physics: const BouncingScrollPhysics(),
-                              itemCount: _accountIcons.length,
-                              separatorBuilder: (_, __) =>
-                              const SizedBox(width: 8),
-                              itemBuilder: (context, index) {
-                                final selected =
-                                    selectedIconIndex == index;
-
-                                return GestureDetector(
-                                  onTap: () {
-                                    setDialogState(() {
-                                      selectedIconIndex = index;
-                                    });
-                                  },
-                                  child: AnimatedContainer(
-                                    duration: const Duration(
-                                      milliseconds: 150,
-                                    ),
-                                    width: 54,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius:
-                                      BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: selected
-                                            ? gold
-                                            : dividerColor,
-                                        width: selected ? 2 : 1,
-                                      ),
-                                    ),
-                                    child: Icon(
-                                      _accountIcons[index],
-                                      size: 27,
-                                      color:
-                                      selected ? darkGold : muted,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                          const SizedBox(height: 18),
-                          const Divider(color: dividerColor),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: isSaving
-                                      ? null
-                                      : () {
-                                    Navigator.pop(dialogContext);
-                                  },
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: textColor,
-                                    side: const BorderSide(
-                                      color: dividerColor,
-                                    ),
-                                    minimumSize: const Size(0, 44),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                      BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    'CANCEL',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: isSaving
-                                      ? null
-                                      : () async {
-                                    final name =
-                                    nameController.text.trim();
-
-                                    final amount = double.tryParse(
-                                      amountController.text,
-                                    );
-
-                                    if (name.isEmpty ||
-                                        amount == null ||
-                                        !amount.isFinite ||
-                                        amount < 0) {
-                                      ScaffoldMessenger.of(
-                                        this.context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Enter a valid account name and amount.',
-                                          ),
-                                          backgroundColor: darkGold,
-                                        ),
-                                      );
-                                      return;
-                                    }
-
-                                    setDialogState(() {
-                                      isSaving = true;
-                                    });
-
-                                    final newAccount =
-                                    <String, dynamic>{
-                                      'id': DateTime.now()
-                                          .microsecondsSinceEpoch
-                                          .toString(),
-                                      'name': name,
-                                      'initialAmount': amount,
-                                      'iconIndex': selectedIconIndex,
-                                      'createdAt': DateTime.now()
-                                          .toIso8601String(),
-                                    };
-
-                                    final updatedAccounts = [
-                                      ..._customAccounts,
-                                      newAccount,
-                                    ];
-
-                                    try {
-                                      await _persistCustomAccounts(
-                                        updatedAccounts,
-                                      );
-
-                                      if (!mounted) return;
-
-                                      setState(() {
-                                        _customAccounts =
-                                            updatedAccounts;
-                                      });
-
-                                      if (dialogContext.mounted) {
-                                        Navigator.pop(dialogContext);
-                                      }
-
-                                      ScaffoldMessenger.of(
-                                        this.context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            '$name account added successfully.',
-                                          ),
-                                          backgroundColor: darkGold,
-                                        ),
-                                      );
-                                    } catch (error) {
-                                      if (dialogContext.mounted) {
-                                        setDialogState(() {
-                                          isSaving = false;
-                                        });
-                                      }
-
-                                      if (!mounted) return;
-
-                                      ScaffoldMessenger.of(
-                                        this.context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Could not save account: $error',
-                                          ),
-                                          backgroundColor: expenseColor,
-                                        ),
-                                      );
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: gold,
-                                    foregroundColor: darkGold,
-                                    disabledBackgroundColor:
-                                    gold.withValues(alpha: 0.5),
-                                    elevation: 0,
-                                    minimumSize: const Size(0, 44),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                      BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  child: isSaving
-                                      ? const SizedBox(
-                                    width: 17,
-                                    height: 17,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: darkGold,
-                                    ),
-                                  )
-                                      : const Text(
-                                    'SAVE',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      );
-    } finally {
-      nameController.dispose();
-      amountController.dispose();
+    if (!saved) {
+      throw Exception('Unable to save accounts locally.');
     }
   }
 
@@ -966,9 +513,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
 
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(
-                      '$title transactions will appear here.',
-                    ),
+                    content: Text('$title transactions will appear here.'),
                     backgroundColor: darkGold,
                   ),
                 );
@@ -1000,7 +545,6 @@ class _AccountsScreenState extends State<AccountsScreen> {
                       ),
                     ),
                     const SizedBox(width: 7),
-
                   ],
                 ),
               ),
@@ -1011,21 +555,31 @@ class _AccountsScreenState extends State<AccountsScreen> {
     );
   }
 
-  Widget _buildCustomAccountSection(
-      Map<String, dynamic> account,
-      ) {
+  Widget _buildCustomAccountSection(Map<String, dynamic> account) {
     final name = account['name'] as String? ?? 'Untitled';
 
     final initialAmount =
         (account['initialAmount'] as num?)?.toDouble() ?? 0;
 
-    final iconIndex =
-        (account['iconIndex'] as num?)?.toInt() ?? 0;
+    final iconIndex = (account['iconIndex'] as num?)?.toInt() ?? 0;
+
+    final accountIcons = <IconData>[
+      Icons.payments_outlined,
+      Icons.credit_card_rounded,
+      Icons.chat_bubble_rounded,
+      Icons.account_balance_outlined,
+      Icons.savings_outlined,
+      Icons.wallet_outlined,
+      Icons.account_balance_wallet_outlined,
+      Icons.currency_exchange_rounded,
+      Icons.storefront_outlined,
+      Icons.work_outline_rounded,
+      Icons.attach_money_rounded,
+      Icons.account_box_outlined,
+    ];
 
     final safeIconIndex =
-    iconIndex >= 0 && iconIndex < _accountIcons.length
-        ? iconIndex
-        : 0;
+    iconIndex >= 0 && iconIndex < accountIcons.length ? iconIndex : 0;
 
     return Container(
       width: double.infinity,
@@ -1053,7 +607,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                   borderRadius: BorderRadius.circular(9),
                 ),
                 child: Icon(
-                  _accountIcons[safeIconIndex],
+                  accountIcons[safeIconIndex],
                   color: darkGold,
                   size: 21,
                 ),
@@ -1140,73 +694,6 @@ class _AccountsScreenState extends State<AccountsScreen> {
     );
   }
 
-  Widget _buildAddAccountButton() {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: _showAddAccountDialog,
-        borderRadius: BorderRadius.circular(15),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 13,
-            vertical: 16,
-          ),
-          decoration: BoxDecoration(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(
-              color: const Color(0xFFD7C5A1),
-              width: 1,
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 43,
-                height: 43,
-                decoration: const BoxDecoration(
-                  color: gold,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.add_rounded,
-                  color: darkGold,
-                  size: 27,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Add New Account',
-                      style: TextStyle(
-                        color: textColor,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Add a Card, Cash, or Savings source',
-                      style: TextStyle(
-                        color: muted,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1229,7 +716,6 @@ class _AccountsScreenState extends State<AccountsScreen> {
               const SizedBox(height: 18),
               _buildBalanceCard(),
               const SizedBox(height: 14),
-
               _buildAccountSection(
                 title: 'Card',
                 subtitle: 'Balance',
@@ -1237,7 +723,6 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 icon: Icons.credit_card_rounded,
               ),
               const SizedBox(height: _accountSpacing),
-
               _buildAccountSection(
                 title: 'Cash',
                 subtitle: 'Balance',
@@ -1245,14 +730,12 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 icon: Icons.payments_outlined,
               ),
               const SizedBox(height: _accountSpacing),
-
               _buildAccountSection(
                 title: 'Savings',
                 subtitle: 'Balance',
                 balance: _savingsBalance,
                 icon: Icons.account_balance_outlined,
               ),
-
               if (_customAccounts.isNotEmpty) ...[
                 const SizedBox(height: _accountSpacing),
                 ..._customAccounts.map(
@@ -1264,11 +747,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                   ),
                 ),
               ],
-
-              const SizedBox(height: 3),
-              _buildAddAccountButton(),
               const SizedBox(height: 16),
-
               const Center(
                 child: Text(
                   'DAILYDHAN',
@@ -1281,7 +760,6 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 ),
               ),
               const SizedBox(height: 5),
-
               const Center(
                 child: Text(
                   'Your money, organised in one place.',

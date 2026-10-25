@@ -23,12 +23,34 @@ class _ChartsScreenState extends State<ChartsScreen> {
   List<TransactionModel> _transactions = [];
   String _period = 'Monthly';
   DateTime _selectedMonth = DateTime.now();
+  DateTime _selectedWeekStart = _startOfWeek(DateTime.now());
   bool _loading = true;
+
+  static DateTime _startOfWeek(DateTime date) {
+    final day = DateTime(date.year, date.month, date.day);
+    return day.subtract(Duration(days: day.weekday - 1));
+  }
 
   @override
   void initState() {
     super.initState();
     _loadTransactions();
+
+    TransactionService.transactionUpdates.addListener(
+      _onTransactionsUpdated,
+    );
+  }
+
+  void _onTransactionsUpdated() {
+    _loadTransactions();
+  }
+
+  @override
+  void dispose() {
+    TransactionService.transactionUpdates.removeListener(
+      _onTransactionsUpdated,
+    );
+    super.dispose();
   }
 
   Future<void> _loadTransactions() async {
@@ -41,12 +63,14 @@ class _ChartsScreenState extends State<ChartsScreen> {
         _transactions = transactions;
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
 
-      setState(() {
-        _loading = false;
-      });
+      setState(() => _loading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to load transactions: $e')),
+      );
     }
   }
 
@@ -61,12 +85,9 @@ class _ChartsScreenState extends State<ChartsScreen> {
         return t.date.year == _selectedMonth.year;
       }
 
-      final now = DateTime.now();
-      final start = DateTime(now.year, now.month, now.day)
-          .subtract(const Duration(days: 6));
+      final end = _selectedWeekStart.add(const Duration(days: 7));
 
-      return !t.date.isBefore(start) &&
-          !t.date.isAfter(DateTime(now.year, now.month, now.day, 23, 59, 59));
+      return !t.date.isBefore(_selectedWeekStart) && t.date.isBefore(end);
     }).toList();
   }
 
@@ -103,6 +124,7 @@ class _ChartsScreenState extends State<ChartsScreen> {
 
   String _money(double value) {
     final amount = value.abs().toStringAsFixed(0);
+
     final formatted = amount.replaceAllMapped(
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
           (match) => '${match[1]},',
@@ -127,15 +149,38 @@ class _ChartsScreenState extends State<ChartsScreen> {
       'December',
     ];
 
+    if (_period == 'Weekly') {
+      final end = _selectedWeekStart.add(const Duration(days: 6));
+
+      return '${_selectedWeekStart.day} '
+          '${_shortMonth(_selectedWeekStart.month)} – '
+          '${end.day} ${_shortMonth(end.month)}, ${end.year}';
+    }
+
+    if (_period == 'Yearly') {
+      return '${_selectedMonth.year}';
+    }
+
     return '${months[_selectedMonth.month - 1]} ${_selectedMonth.year}';
   }
 
-  void _changeMonth(int amount) {
+  void _changePeriodDate(int amount) {
     setState(() {
-      _selectedMonth = DateTime(
-        _selectedMonth.year,
-        _selectedMonth.month + amount,
-      );
+      if (_period == 'Weekly') {
+        _selectedWeekStart = _selectedWeekStart.add(
+          Duration(days: 7 * amount),
+        );
+      } else if (_period == 'Monthly') {
+        _selectedMonth = DateTime(
+          _selectedMonth.year,
+          _selectedMonth.month + amount,
+        );
+      } else if (_period == 'Yearly') {
+        _selectedMonth = DateTime(
+          _selectedMonth.year + amount,
+          _selectedMonth.month,
+        );
+      }
     });
   }
 
@@ -144,31 +189,46 @@ class _ChartsScreenState extends State<ChartsScreen> {
     return Scaffold(
       backgroundColor: background,
       body: SafeArea(
-        child: _loading
-            ? const Center(
-          child: CircularProgressIndicator(color: gold),
-        )
-            : RefreshIndicator(
-          color: gold,
-          onRefresh: _loadTransactions,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
-            children: [
-              _periodSelector(),
-              const SizedBox(height: 14),
-              _monthHeader(),
-              const SizedBox(height: 12),
-              _summaryCards(),
-              const SizedBox(height: 12),
-              _cashFlowCard(),
-              const SizedBox(height: 12),
-              _categoryBreakdown(),
-              const SizedBox(height: 12),
-              _topCategoriesCard(),
-              const SizedBox(height: 12),
-              _insightCard(),
-            ],
-          ),
+        child: Column(
+          children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                'Charts',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: textColor,
+                ),
+              ),
+            ),
+            Expanded(
+              child: _loading
+                  ? const Center(
+                child: CircularProgressIndicator(color: gold),
+              )
+                  : RefreshIndicator(
+                color: gold,
+                onRefresh: _loadTransactions,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
+                  children: [
+                    _periodSelector(),
+                    const SizedBox(height: 12),
+                    _monthHeader(),
+                    const SizedBox(height: 12),
+                    _summaryCards(),
+                    const SizedBox(height: 12),
+                    _cashFlowCard(),
+                    const SizedBox(height: 12),
+                    _categoryBreakdown(),
+                    const SizedBox(height: 12),
+                    _topCategoriesCard(),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -187,9 +247,17 @@ class _ChartsScreenState extends State<ChartsScreen> {
 
           return Expanded(
             child: GestureDetector(
-              onTap: () => setState(() => _period = period),
+              onTap: () {
+                setState(() {
+                  _period = period;
+
+                  if (period == 'Weekly') {
+                    _selectedWeekStart = _startOfWeek(DateTime.now());
+                  }
+                });
+              },
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: const EdgeInsets.symmetric(vertical: 9),
                 decoration: BoxDecoration(
                   color: selected ? gold : Colors.transparent,
                   borderRadius: BorderRadius.circular(24),
@@ -198,7 +266,7 @@ class _ChartsScreenState extends State<ChartsScreen> {
                   period,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 13,
                     color: selected ? darkGold : muted,
                     fontWeight:
                     selected ? FontWeight.bold : FontWeight.normal,
@@ -215,30 +283,38 @@ class _ChartsScreenState extends State<ChartsScreen> {
   Widget _monthHeader() {
     return Row(
       children: [
-        const Icon(Icons.calendar_month, size: 19, color: darkGold),
+        const Icon(
+          Icons.calendar_month_rounded,
+          size: 19,
+          color: darkGold,
+        ),
         const SizedBox(width: 5),
         Expanded(
           child: Text(
-            _period == 'Weekly' ? 'Last 7 days' : _monthLabel,
+            _monthLabel,
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: textColor,
+              color: darkGold,
             ),
           ),
         ),
-        if (_period == 'Monthly')
-          IconButton(
-            onPressed: () => _changeMonth(-1),
-            icon: const Icon(Icons.chevron_left, size: 22),
-            visualDensity: VisualDensity.compact,
+        IconButton(
+          onPressed: () => _changePeriodDate(-1),
+          icon: const Icon(Icons.chevron_left_rounded),
+          visualDensity: VisualDensity.compact,
+          style: IconButton.styleFrom(
+            backgroundColor: const Color(0xFFF0EDE4),
           ),
-        if (_period == 'Monthly')
-          IconButton(
-            onPressed: () => _changeMonth(1),
-            icon: const Icon(Icons.chevron_right, size: 22),
-            visualDensity: VisualDensity.compact,
+        ),
+        IconButton(
+          onPressed: () => _changePeriodDate(1),
+          icon: const Icon(Icons.chevron_right_rounded),
+          visualDensity: VisualDensity.compact,
+          style: IconButton.styleFrom(
+            backgroundColor: const Color(0xFFF0EDE4),
           ),
+        ),
       ],
     );
   }
@@ -253,9 +329,6 @@ class _ChartsScreenState extends State<ChartsScreen> {
     return Row(
       children: cards.asMap().entries.map((entry) {
         final item = entry.value;
-        final label = item.$1;
-        final amount = item.$2;
-        final color = item.$3;
 
         return Expanded(
           child: Container(
@@ -279,14 +352,14 @@ class _ChartsScreenState extends State<ChartsScreen> {
                       width: 7,
                       height: 7,
                       decoration: BoxDecoration(
-                        color: color,
+                        color: item.$3,
                         shape: BoxShape.circle,
                       ),
                     ),
                     const SizedBox(width: 4),
                     Flexible(
                       child: Text(
-                        label,
+                        item.$1,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -302,11 +375,11 @@ class _ChartsScreenState extends State<ChartsScreen> {
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    _money(amount),
+                    _money(item.$2),
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 17,
                       fontWeight: FontWeight.bold,
-                      color: color,
+                      color: item.$3,
                     ),
                   ),
                 ),
@@ -319,75 +392,87 @@ class _ChartsScreenState extends State<ChartsScreen> {
   }
 
   Widget _cashFlowCard() {
-    final months = _lastSixMonths();
+    final groups = _chartGroups();
     double maxAmount = 1;
 
-    for (final month in months) {
-      final income = _sumForMonth(month, true);
-      final expense = _sumForMonth(month, false);
-
-      if (income > maxAmount) maxAmount = income;
-      if (expense > maxAmount) maxAmount = expense;
+    for (final group in groups) {
+      if (group.$2 > maxAmount) maxAmount = group.$2;
+      if (group.$3 > maxAmount) maxAmount = group.$3;
     }
 
     return _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Income vs Expenses',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: textColor,
-            ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Last 6 months cash flow',
-            style: TextStyle(fontSize: 11, color: muted),
-          ),
-          const SizedBox(height: 14),
           Row(
             children: [
-              const Icon(Icons.calendar_month, size: 16, color: darkGold),
-              const SizedBox(width: 5),
-              Expanded(
+              const Expanded(
                 child: Text(
-                  _period == 'Weekly' ? 'Last 7 days' : _monthLabel,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                  'Income vs Expenses',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                     color: textColor,
                   ),
                 ),
               ),
-              Flexible(
-                child: Text(
-                  '+${_money(_income)}',
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 10, color: green),
-                ),
-              ),
-              const SizedBox(width: 5),
-              Flexible(
-                child: Text(
-                  '-${_money(_expenses)}',
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 10, color: red),
-                ),
-              ),
+              _legend(green, 'In'),
+              const SizedBox(width: 8),
+              _legend(red, 'Out'),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF7F3E9),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.calendar_month_rounded,
+                  size: 16,
+                  color: darkGold,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    _period == 'Weekly'
+                        ? 'Selected week'
+                        : _period == 'Yearly'
+                        ? 'Full year $_monthLabel overview'
+                        : _monthLabel,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: textColor,
+                    ),
+                  ),
+                ),
+                Flexible(
+                  child: Text(
+                    '+${_money(_income)}',
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11, color: green),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    '-${_money(_expenses)}',
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11, color: red),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
           SizedBox(
-            height: 122,
+            height: 125,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
-              children: months.map((month) {
-                final income = _sumForMonth(month, true);
-                final expense = _sumForMonth(month, false);
-
+              children: groups.map((group) {
                 return Expanded(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -397,17 +482,17 @@ class _ChartsScreenState extends State<ChartsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            _bar(income / maxAmount, green),
-                            const SizedBox(width: 2),
-                            _bar(expense / maxAmount, red),
+                            _bar(group.$2 / maxAmount, green),
+                            const SizedBox(width: 3),
+                            _bar(group.$3 / maxAmount, red),
                           ],
                         ),
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        _shortMonth(month.month),
+                        group.$1,
                         style: const TextStyle(
-                          fontSize: 10,
+                          fontSize: 11,
                           color: muted,
                         ),
                       ),
@@ -422,27 +507,88 @@ class _ChartsScreenState extends State<ChartsScreen> {
     );
   }
 
+  List<(String, double, double)> _chartGroups() {
+    if (_period == 'Yearly') {
+      return List.generate(12, (i) {
+        final month = DateTime(_selectedMonth.year, i + 1);
+
+        return (
+        _shortMonth(i + 1),
+        _sumForMonth(month, true),
+        _sumForMonth(month, false),
+        );
+      });
+    }
+
+    if (_period == 'Monthly') {
+      final monthStart = DateTime(
+        _selectedMonth.year,
+        _selectedMonth.month,
+        1,
+      );
+
+      final nextMonth = DateTime(
+        _selectedMonth.year,
+        _selectedMonth.month + 1,
+        1,
+      );
+
+      return List.generate(4, (i) {
+        final weekStart = monthStart.add(Duration(days: i * 7));
+        final nextWeekStart = weekStart.add(const Duration(days: 7));
+
+        final weekEnd =
+        nextWeekStart.isBefore(nextMonth) ? nextWeekStart : nextMonth;
+
+        final weekTransactions = _transactions.where((t) {
+          return !t.date.isBefore(weekStart) && t.date.isBefore(weekEnd);
+        });
+
+        final income = weekTransactions
+            .where((t) => t.isIncome)
+            .fold(0.0, (sum, t) => sum + t.amount);
+
+        final expenses = weekTransactions
+            .where((t) => !t.isIncome)
+            .fold(0.0, (sum, t) => sum + t.amount);
+
+        return ('W${i + 1}', income, expenses);
+      });
+    }
+
+    return List.generate(7, (i) {
+      final date = _selectedWeekStart.add(Duration(days: i));
+
+      final dayTransactions = _filtered.where(
+            (t) =>
+        t.date.year == date.year &&
+            t.date.month == date.month &&
+            t.date.day == date.day,
+      );
+
+      return (
+      ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][date.weekday - 1],
+      dayTransactions
+          .where((t) => t.isIncome)
+          .fold(0.0, (sum, t) => sum + t.amount),
+      dayTransactions
+          .where((t) => !t.isIncome)
+          .fold(0.0, (sum, t) => sum + t.amount),
+      );
+    });
+  }
+
   Widget _bar(double value, Color color) {
     return Flexible(
       child: Container(
-        width: 12,
+        width: 10,
         height: (value * 82).clamp(3.0, 82.0),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.82),
+          color: color.withValues(alpha: 0.85),
           borderRadius: const BorderRadius.vertical(
             top: Radius.circular(4),
           ),
         ),
-      ),
-    );
-  }
-
-  List<DateTime> _lastSixMonths() {
-    return List.generate(
-      6,
-          (index) => DateTime(
-        _selectedMonth.year,
-        _selectedMonth.month - 5 + index,
       ),
     );
   }
@@ -484,12 +630,12 @@ class _ChartsScreenState extends State<ChartsScreen> {
     final totalSpent =
     categories.fold(0.0, (sum, item) => sum + item.value);
 
-    final colors = [
-      const Color(0xFF513829),
-      const Color(0xFFD9AA2B),
-      const Color(0xFFF3C95B),
-      const Color(0xFFB88600),
-      const Color(0xFF8D806D),
+    const colors = [
+      Color(0xFF513829),
+      Color(0xFFD9AA2B),
+      Color(0xFFF3C95B),
+      Color(0xFFB88600),
+      Color(0xFF8D806D),
     ];
 
     return _card(
@@ -499,17 +645,12 @@ class _ChartsScreenState extends State<ChartsScreen> {
           const Text(
             'Category Breakdown',
             style: TextStyle(
-              fontSize: 16,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
               color: textColor,
             ),
           ),
-          const SizedBox(height: 4),
-          const Text(
-            'Distribution across expense categories',
-            style: TextStyle(fontSize: 11, color: muted),
-          ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
           Center(
             child: SizedBox(
               width: 150,
@@ -537,25 +678,18 @@ class _ChartsScreenState extends State<ChartsScreen> {
                     children: [
                       const Text(
                         'TOTAL SPENT',
-                        style: TextStyle(fontSize: 10, color: muted),
+                        style: TextStyle(fontSize: 11, color: muted),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 3),
                       FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Text(
                           _money(totalSpent),
                           style: const TextStyle(
-                            fontSize: 19,
+                            fontSize: 22,
                             fontWeight: FontWeight.bold,
                             color: textColor,
                           ),
-                        ),
-                      ),
-                      Text(
-                        '${_filtered.where((t) => !t.isIncome).length} Txns',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: darkGold,
                         ),
                       ),
                     ],
@@ -564,34 +698,33 @@ class _ChartsScreenState extends State<ChartsScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
           Wrap(
-            spacing: 10,
+            spacing: 12,
             runSpacing: 8,
-            children: categories.take(5).toList().asMap().entries.map((entry) {
-              final item = entry.value;
+            children: categories.take(5).toList().asMap().entries.map((e) {
               final percent =
-              totalSpent == 0 ? 0 : item.value / totalSpent * 100;
+              totalSpent == 0 ? 0.0 : e.value.value / totalSpent * 100;
 
               return SizedBox(
                 width: 135,
                 child: Row(
                   children: [
                     Container(
-                      width: 9,
-                      height: 9,
+                      width: 8,
+                      height: 8,
                       decoration: BoxDecoration(
-                        color: colors[entry.key % colors.length],
+                        color: colors[e.key % colors.length],
                         shape: BoxShape.circle,
                       ),
                     ),
                     const SizedBox(width: 5),
                     Expanded(
                       child: Text(
-                        '${item.key} (${percent.toStringAsFixed(0)}%)',
+                        '${e.value.key} (${percent.toStringAsFixed(0)}%)',
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 10,
+                          fontSize: 12,
                           color: textColor,
                         ),
                       ),
@@ -610,46 +743,62 @@ class _ChartsScreenState extends State<ChartsScreen> {
     final top = _topCategories;
     final maxAmount = top.isEmpty ? 1.0 : top.first.value;
 
-    final colors = [
-      const Color(0xFF513829),
-      const Color(0xFFD9AA2B),
-      const Color(0xFFF3C95B),
-      const Color(0xFFB88600),
+    const colors = [
+      Color(0xFF513829),
+      Color(0xFFD9AA2B),
+      Color(0xFFF3C95B),
+      Color(0xFFB88600),
     ];
 
-    final icons = [
-      Icons.restaurant,
-      Icons.shopping_bag,
-      Icons.shopping_cart,
-      Icons.directions_car,
+    const icons = [
+      Icons.restaurant_rounded,
+      Icons.shopping_bag_rounded,
+      Icons.shopping_cart_rounded,
+      Icons.directions_car_rounded,
     ];
+
+    final totalSpent = _expenses;
 
     return _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Top Categories',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: textColor,
-            ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Ranked by overall spending impact',
-            style: TextStyle(fontSize: 11, color: muted),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Top Categories',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF2D1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${top.length} Categories',
+                  style: const TextStyle(fontSize: 11, color: darkGold),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 14),
           if (top.isEmpty)
             const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
+              padding: EdgeInsets.symmetric(vertical: 20),
               child: Center(
                 child: Text(
                   'Add expenses to see your top categories.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, color: muted),
+                  style: TextStyle(fontSize: 13, color: muted),
                 ),
               ),
             )
@@ -664,17 +813,21 @@ class _ChartsScreenState extends State<ChartsScreen> {
               )
                   .length;
 
+              final percent = totalSpent == 0
+                  ? 0.0
+                  : category.value / totalSpent * 100;
+
               return Padding(
-                padding: const EdgeInsets.only(bottom: 15),
+                padding: const EdgeInsets.only(bottom: 13),
                 child: Column(
                   children: [
                     Row(
                       children: [
                         Container(
-                          width: 36,
+                          width: 38,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF2EEE5),
+                            color: const Color(0xFFF7F0DC),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
@@ -693,7 +846,7 @@ class _ChartsScreenState extends State<ChartsScreen> {
                           child: Text(
                             '#${index + 1}',
                             style: const TextStyle(
-                              fontSize: 10,
+                              fontSize: 11,
                               color: muted,
                             ),
                           ),
@@ -704,17 +857,16 @@ class _ChartsScreenState extends State<ChartsScreen> {
                             category.key,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              fontSize: 13,
+                              fontSize: 14,
                               fontWeight: FontWeight.bold,
                               color: textColor,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 4),
                         Text(
                           _money(category.value),
                           style: const TextStyle(
-                            fontSize: 13,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
                             color: textColor,
                           ),
@@ -725,8 +877,12 @@ class _ChartsScreenState extends State<ChartsScreen> {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        '$count transactions',
-                        style: const TextStyle(fontSize: 10, color: muted),
+                        '$count transactions • '
+                            '${percent.toStringAsFixed(0)}% of total',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: muted,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 7),
@@ -748,57 +904,24 @@ class _ChartsScreenState extends State<ChartsScreen> {
     );
   }
 
-  Widget _insightCard() {
-    final total = _income + _expenses;
-    final rate = total == 0 ? 0.0 : (_total / total * 100);
-
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF2D1),
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const CircleAvatar(
-            radius: 17,
-            backgroundColor: Color(0xFFE8BD42),
-            child: Icon(
-              Icons.lightbulb_outline,
-              color: darkGold,
-              size: 20,
-            ),
+  Widget _legend(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Mindful Discipline Insight',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  _total >= 0
-                      ? 'Your current net total is ${_money(_total)}. Your income minus expenses is ${rate.toStringAsFixed(1)}% of combined activity.'
-                      : 'Your expenses exceed your income by ${_money(-_total)} for this period. Review your spending categories.',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    height: 1.5,
-                    color: Color(0xFF65573B),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(width: 3),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11, color: muted),
+        ),
+      ],
     );
   }
 
@@ -826,6 +949,7 @@ class _DonutPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final total = values.fold(0.0, (sum, value) => sum + value);
+
     if (total <= 0) return;
 
     final rect = Rect.fromLTWH(0, 0, size.width, size.height);
@@ -847,17 +971,10 @@ class _DonutPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _DonutPainter oldDelegate) {
-    if (oldDelegate.values.length != values.length ||
-        oldDelegate.colors.length != colors.length) {
-      return true;
-    }
+    if (oldDelegate.values.length != values.length) return true;
 
     for (var i = 0; i < values.length; i++) {
       if (oldDelegate.values[i] != values[i]) return true;
-    }
-
-    for (var i = 0; i < colors.length; i++) {
-      if (oldDelegate.colors[i] != colors[i]) return true;
     }
 
     return false;

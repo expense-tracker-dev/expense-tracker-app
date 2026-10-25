@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'views/auth/login_screen.dart';
 import 'views/auth/signup_screen.dart';
@@ -9,8 +10,11 @@ import 'views/transactions/add_transaction_screen.dart';
 import 'views/budgets/budgets_screen.dart';
 import 'views/accounts/accounts_screen.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await dotenv.load(fileName: '.env');
+
   runApp(const DailyDhanApp());
 }
 

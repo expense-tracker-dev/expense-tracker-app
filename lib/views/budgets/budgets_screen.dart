@@ -1037,7 +1037,7 @@ class BudgetsScreenState extends State<BudgetsScreen> with RouteAware {
           style: TextStyle(
             color: _text,
             fontWeight: FontWeight.bold,
-            fontSize: 19,
+            fontSize: 22,
           ),
         ),
       ),

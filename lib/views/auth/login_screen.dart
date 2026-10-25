@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -10,8 +11,10 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
 
   bool _obscurePassword = true;
+  bool _isLoading = false;
 
   static const Color background = Color(0xFFFCF8EF);
   static const Color gold = Color(0xFFD9AA2B);
@@ -34,18 +37,50 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void _login() {
-    if (_emailController.text.trim().isEmpty ||
-        _passwordController.text.isEmpty) {
+  Future<void> _login() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
       _showMessage('Please enter your email and password.');
       return;
     }
 
-    _showMessage('Connect your authentication controller to log in.');
-  }
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+      _showMessage('Please enter a valid email address.');
+      return;
+    }
 
-  void _googleLogin() {
-    _showMessage('Connect Google Sign-In to continue.');
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _authService.login(
+        email: email,
+        password: password,
+      );
+
+      if (!mounted) return;
+
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/home',
+            (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      _showMessage(
+        e.toString().replaceFirst('Exception: ', ''),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -68,19 +103,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ],
               ),
-              child: Row(
+              child: const Row(
                 children: [
-                  IconButton(
-                    onPressed: () => Navigator.maybePop(context),
-                    icon: const Icon(
-                      Icons.arrow_back,
-                      size: 26,
-                      color: textColor,
-                    ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                  const Expanded(
+                  SizedBox(width: 26),
+                  Expanded(
                     child: Center(
                       child: Text(
                         'Login',
@@ -93,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 26),
+                  SizedBox(width: 26),
                 ],
               ),
             ),
@@ -231,17 +257,27 @@ class _LoginScreenState extends State<LoginScreen> {
                     SizedBox(
                       height: 58,
                       child: ElevatedButton(
-                        onPressed: _login,
+                        onPressed: _isLoading ? null : _login,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: gold,
                           foregroundColor: const Color(0xFF624900),
                           elevation: 3,
-                          shadowColor: Colors.brown.withValues(alpha: 0.16),
+                          shadowColor:
+                          Colors.brown.withValues(alpha: 0.16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(32),
                           ),
                         ),
-                        child: const Row(
+                        child: _isLoading
+                            ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Color(0xFF624900),
+                          ),
+                        )
+                            : const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
@@ -253,68 +289,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             SizedBox(width: 10),
                             Icon(Icons.arrow_forward, size: 21),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    const Row(
-                      children: [
-                        Expanded(
-                          child: Divider(
-                            color: Color(0xFFE5DED1),
-                            thickness: 1.2,
-                          ),
-                        ),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-                          child: Text(
-                            'OR CONTINUE WITH',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: iconColor,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Divider(
-                            color: Color(0xFFE5DED1),
-                            thickness: 1.2,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _googleLogin,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: inputBackground,
-                          foregroundColor: textColor,
-                          elevation: 1,
-                          shadowColor: Colors.brown.withValues(alpha: 0.06),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            side: const BorderSide(
-                              color: Color(0xFFEDE6D9),
-                            ),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _googleLogo(),
-                            const SizedBox(width: 12),
-                            const Text(
-                              'Continue with Google',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
                           ],
                         ),
                       ),
@@ -404,24 +378,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 18),
-        ),
-      ),
-    );
-  }
-
-  Widget _googleLogo() {
-    return const SizedBox(
-      width: 24,
-      height: 24,
-      child: Center(
-        child: Text(
-          'G',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF4285F4),
-            height: 1,
-          ),
         ),
       ),
     );

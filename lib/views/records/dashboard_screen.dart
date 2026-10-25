@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../categories/categories_screen.dart';
 import '../calculator/cash_calculator_screen.dart';
+import '../help/help_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({
@@ -44,6 +45,14 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
+  void _openHelp(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => const MyMoneyHelpScreen(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -79,14 +88,6 @@ class DashboardScreen extends StatelessWidget {
 
                   _buildMenuItem(
                     context,
-                    icon: Icons.call_split_rounded,
-                    title: 'Split Dhan',
-                    badge: '3 Active',
-                    onTap: () => _showMessage(context, 'Split Dhan'),
-                  ),
-
-                  _buildMenuItem(
-                    context,
                     icon: Icons.trending_up_rounded,
                     title: 'Money Forecast',
                     badge: '✦ AI',
@@ -118,10 +119,10 @@ class DashboardScreen extends StatelessWidget {
 
                   _buildMenuItem(
                     context,
-                    icon: Icons.support_agent_rounded,
-                    title: 'Help & Concierge',
+                    icon: Icons.help_outline_rounded,
+                    title: 'Help',
                     showArrow: true,
-                    onTap: () => _showMessage(context, 'Help & Concierge'),
+                    onTap: () => _openHelp(context),
                   ),
                 ],
               ),
