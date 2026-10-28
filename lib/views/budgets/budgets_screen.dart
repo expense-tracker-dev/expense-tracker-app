@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../categories/categories_screen.dart';
 import '../../models/transaction_model.dart';
@@ -73,7 +74,16 @@ class MonthlyBudget {
 }
 
 class BudgetStorage {
-  static const String _key = 'dailydhan_monthly_budgets';
+  // Each signed-in Firebase user gets a separate budget storage key.
+  static String get _key {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+
+    if (userId == null) {
+      return 'dailydhan_monthly_budgets_guest';
+    }
+
+    return 'dailydhan_monthly_budgets_$userId';
+  }
 
   static Future<List<MonthlyBudget>> getAll() async {
     final prefs = await SharedPreferences.getInstance();
@@ -1259,7 +1269,9 @@ class _BudgetDialogState extends State<_BudgetDialog> {
               : () async {
             final amount = double.tryParse(_controller.text.trim());
 
-            if (amount == null || !amount.isFinite || amount <= 0) {
+            if (amount == null ||
+                !amount.isFinite ||
+                amount <= 0) {
               setState(() {
                 _error = 'Enter a valid amount greater than zero.';
               });
@@ -1281,7 +1293,8 @@ class _BudgetDialogState extends State<_BudgetDialog> {
               if (mounted) {
                 setState(() {
                   _saving = false;
-                  _error = 'Unable to save budget. Please try again.';
+                  _error =
+                  'Unable to save budget. Please try again.';
                 });
               }
             }

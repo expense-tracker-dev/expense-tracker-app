@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../categories/categories_screen.dart';
 import '../calculator/cash_calculator_screen.dart';
 import '../help/help_screen.dart';
+import '../reports/export_reports_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({
@@ -53,8 +56,188 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
+  // Open the Export Reports screen.
+  void _openExportReports(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => const ExportReportScreen(),
+      ),
+    );
+  }
+
+  // Logout confirmation dialog using the DailyDhan theme.
+  Future<void> _logout(BuildContext context) async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: cream,
+        elevation: 12,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(
+            color: Color(0xFFE8D7A9),
+            width: 1,
+          ),
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              height: 68,
+              width: 68,
+              decoration: BoxDecoration(
+                color: logoutBackground,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: const Color(0xFFE8D7A9),
+                  width: 1,
+                ),
+              ),
+              child: const Icon(
+                Icons.logout_rounded,
+                size: 32,
+                color: logoutRed,
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Log Out?',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: textColor,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Are you sure you want to log out of DailyDhan? '
+                  'You can sign in again anytime.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: muted,
+                fontSize: 13,
+                height: 1.6,
+              ),
+            ),
+            const SizedBox(height: 26),
+
+            // Cancel button
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext, false);
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: darkGold,
+                  side: const BorderSide(
+                    color: gold,
+                    width: 1.3,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Confirm logout button
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext, true);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: gold,
+                  foregroundColor: textColor,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.logout_rounded,
+                      size: 18,
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'Yes, Log Out',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (shouldLogout != true || !context.mounted) return;
+
+    try {
+      await FirebaseAuth.instance.signOut();
+
+      if (!context.mounted) return;
+
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/login',
+            (route) => false,
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.message ?? 'Unable to log out. Please try again.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to log out. Please try again.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
+    final userName = user?.displayName?.trim().isNotEmpty == true
+        ? user!.displayName!.trim()
+        : 'DailyDhan User';
+
+    final userEmail = user?.email ?? 'No email available';
+
     return Material(
       color: Colors.white,
       child: SafeArea(
@@ -65,7 +248,11 @@ class DashboardScreen extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                 children: [
-                  _buildProfileCard(),
+                  _buildProfileCard(
+                    userName: userName,
+                    userEmail: userEmail,
+                    photoUrl: user?.photoURL,
+                  ),
                   const SizedBox(height: 18),
 
                   _buildMenuItem(
@@ -78,20 +265,13 @@ class DashboardScreen extends StatelessWidget {
 
                   const SizedBox(height: 5),
 
+                  // Export Reports now opens ExportReportScreen.
                   _buildMenuItem(
                     context,
                     icon: Icons.file_download_outlined,
                     title: 'Export Reports',
                     badge: 'New Tax Tools',
-                    onTap: () => _showMessage(context, 'Export Reports'),
-                  ),
-
-                  _buildMenuItem(
-                    context,
-                    icon: Icons.trending_up_rounded,
-                    title: 'Money Forecast',
-                    badge: '✦ AI',
-                    onTap: () => _showMessage(context, 'Money Forecast'),
+                    onTap: () => _openExportReports(context),
                   ),
 
                   _buildMenuItem(
@@ -185,7 +365,11 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProfileCard() {
+  Widget _buildProfileCard({
+    required String userName,
+    required String userEmail,
+    String? photoUrl,
+  }) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -204,10 +388,24 @@ class DashboardScreen extends StatelessWidget {
                   color: Color(0xFFE9DFC9),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.person_rounded,
-                  color: darkGold,
-                  size: 30,
+                child: ClipOval(
+                  child: photoUrl != null && photoUrl.isNotEmpty
+                      ? Image.network(
+                    photoUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(
+                        Icons.person_rounded,
+                        color: darkGold,
+                        size: 30,
+                      );
+                    },
+                  )
+                      : const Icon(
+                    Icons.person_rounded,
+                    color: darkGold,
+                    size: 30,
+                  ),
                 ),
               ),
               Positioned(
@@ -230,26 +428,26 @@ class DashboardScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Aarav Sharma',
+                  userName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: textColor,
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                SizedBox(height: 3),
+                const SizedBox(height: 3),
                 Text(
-                  'aarav.sharma@gmail.com',
+                  userEmail,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: muted,
                     fontSize: 11,
                   ),
@@ -373,10 +571,7 @@ class DashboardScreen extends StatelessWidget {
             color: logoutBackground,
             borderRadius: BorderRadius.circular(14),
             child: InkWell(
-              onTap: () {
-                onClose();
-                _showMessage(context, 'Log Out');
-              },
+              onTap: () => _logout(context),
               borderRadius: BorderRadius.circular(14),
               child: Padding(
                 padding: const EdgeInsets.symmetric(

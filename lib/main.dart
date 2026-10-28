@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+
 import 'views/auth/login_screen.dart';
 import 'views/auth/signup_screen.dart';
+import 'views/auth/auth_gate.dart';
 import 'views/records/records_screen.dart';
 import 'views/charts/charts_screen.dart';
 import 'views/transactions/add_transaction_screen.dart';
@@ -12,6 +16,10 @@ import 'views/accounts/accounts_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   await dotenv.load(fileName: '.env');
 
@@ -47,7 +55,7 @@ class DailyDhanApp extends StatelessWidget {
           elevation: 0,
         ),
       ),
-      initialRoute: '/login',
+      home: const AuthGate(),
       routes: {
         '/login': (context) => const LoginScreen(),
         '/signup': (context) => const SignupScreen(),
@@ -137,25 +145,28 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         highlightColor: Colors.transparent,
         child: SizedBox(
           height: 58,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 20,
-                color: selected ? gold : muted,
-              ),
-              const SizedBox(height: 3),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight:
-                  selected ? FontWeight.w700 : FontWeight.w500,
-                  color: selected ? darkGold : muted,
+          child: Transform.translate(
+            offset: const Offset(0, 4),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 20,
+                  color: selected ? gold : muted,
                 ),
-              ),
-            ],
+                const SizedBox(height: 3),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight:
+                    selected ? FontWeight.w700 : FontWeight.w500,
+                    color: selected ? darkGold : muted,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -192,7 +203,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               Expanded(
                 child: Center(
                   child: Transform.translate(
-                    offset: const Offset(0, -10),
+                    offset: const Offset(0, -5),
                     child: Material(
                       color: gold,
                       elevation: 4,
