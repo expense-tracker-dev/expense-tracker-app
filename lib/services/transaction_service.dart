@@ -1,14 +1,24 @@
 import 'dart:convert';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/transaction_model.dart';
 
 class TransactionService {
-  static const String _storageKey = 'dailydhan_transactions';
+  static String get _storageKey {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
 
-  static final ValueNotifier<int> transactionUpdates = ValueNotifier<int>(0);
+    if (userId == null) {
+      return 'dailydhan_transactions_guest';
+    }
+
+    return 'dailydhan_transactions_$userId';
+  }
+
+  static final ValueNotifier<int> transactionUpdates =
+  ValueNotifier<int>(0);
 
   Future<List<TransactionModel>> getTransactions() async {
     final prefs = await SharedPreferences.getInstance();
@@ -16,7 +26,8 @@ class TransactionService {
 
     if (stored == null) return [];
 
-    final List<dynamic> decoded = jsonDecode(stored) as List<dynamic>;
+    final List<dynamic> decoded =
+    jsonDecode(stored) as List<dynamic>;
 
     return decoded
         .map(

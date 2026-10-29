@@ -83,6 +83,38 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _continueWithGoogle() async {
+    if (_isLoading) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _authService.googleLogin();
+
+      if (!mounted) return;
+
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/home',
+            (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      _showMessage(
+        e.toString().replaceFirst('Exception: ', ''),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -153,7 +185,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.brown.withValues(alpha: 0.13),
+                                  color: Colors.brown.withValues(
+                                    alpha: 0.13,
+                                  ),
                                   blurRadius: 8,
                                   offset: const Offset(0, 5),
                                 ),
@@ -262,8 +296,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           backgroundColor: gold,
                           foregroundColor: const Color(0xFF624900),
                           elevation: 3,
-                          shadowColor:
-                          Colors.brown.withValues(alpha: 0.16),
+                          shadowColor: Colors.brown.withValues(
+                            alpha: 0.16,
+                          ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(32),
                           ),
@@ -289,6 +324,73 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             SizedBox(width: 10),
                             Icon(Icons.arrow_forward, size: 21),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // OR divider added here
+                    const Row(
+                      children: [
+                        Expanded(
+                          child: Divider(
+                            color: Color(0xFFE8E1D4),
+                            thickness: 1,
+                          ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 14),
+                          child: Text(
+                            'OR',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF887D67),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Divider(
+                            color: Color(0xFFE8E1D4),
+                            thickness: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      height: 54,
+                      child: OutlinedButton(
+                        onPressed:
+                        _isLoading ? null : _continueWithGoogle,
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: textColor,
+                          side: const BorderSide(
+                            color: Color(0xFFE8E1D4),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(32),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Image.asset(
+                              'assets/images/google.png',
+                              height: 22,
+                              width: 22,
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'Continue with Google',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ],
                         ),
                       ),

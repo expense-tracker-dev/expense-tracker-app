@@ -5,6 +5,7 @@ import '../categories/categories_screen.dart';
 import '../calculator/cash_calculator_screen.dart';
 import '../help/help_screen.dart';
 import '../reports/export_reports_screen.dart';
+import '../forecast/money_forecast_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({
@@ -56,7 +57,6 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  // Open the Export Reports screen.
   void _openExportReports(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -65,7 +65,14 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  // Logout confirmation dialog using the DailyDhan theme.
+  void _openMoneyForecast(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => const MoneyForecastScreen(),
+      ),
+    );
+  }
+
   Future<void> _logout(BuildContext context) async {
     final shouldLogout = await showDialog<bool>(
       context: context,
@@ -124,8 +131,6 @@ class DashboardScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 26),
-
-            // Cancel button
             SizedBox(
               width: double.infinity,
               height: 48,
@@ -153,8 +158,6 @@ class DashboardScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-
-            // Confirm logout button
             SizedBox(
               width: double.infinity,
               height: 48,
@@ -254,7 +257,6 @@ class DashboardScreen extends StatelessWidget {
                     photoUrl: user?.photoURL,
                   ),
                   const SizedBox(height: 18),
-
                   _buildMenuItem(
                     context,
                     icon: Icons.receipt_long_rounded,
@@ -262,10 +264,7 @@ class DashboardScreen extends StatelessWidget {
                     selected: true,
                     onTap: onClose,
                   ),
-
                   const SizedBox(height: 5),
-
-                  // Export Reports now opens ExportReportScreen.
                   _buildMenuItem(
                     context,
                     icon: Icons.file_download_outlined,
@@ -273,12 +272,20 @@ class DashboardScreen extends StatelessWidget {
                     badge: 'New Tax Tools',
                     onTap: () => _openExportReports(context),
                   ),
-
                   _buildMenuItem(
                     context,
                     icon: Icons.calculate_outlined,
                     title: 'Cash Calculator',
                     onTap: () => _openCashCalculator(context),
+                  ),
+
+                  // Money Forecast
+                  _buildMenuItem(
+                    context,
+                    icon: Icons.auto_graph_rounded,
+                    title: 'Money Forecast',
+                    showArrow: true,
+                    onTap: () => _openMoneyForecast(context),
                   ),
 
                   const Padding(
@@ -288,7 +295,6 @@ class DashboardScreen extends StatelessWidget {
                       height: 1,
                     ),
                   ),
-
                   _buildMenuItem(
                     context,
                     icon: Icons.category_outlined,
@@ -296,7 +302,6 @@ class DashboardScreen extends StatelessWidget {
                     showArrow: true,
                     onTap: () => _openCategories(context),
                   ),
-
                   _buildMenuItem(
                     context,
                     icon: Icons.help_outline_rounded,
@@ -378,54 +383,32 @@ class DashboardScreen extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                height: 48,
-                width: 48,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFE9DFC9),
-                  shape: BoxShape.circle,
-                ),
-                child: ClipOval(
-                  child: photoUrl != null && photoUrl.isNotEmpty
-                      ? Image.network(
-                    photoUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(
-                        Icons.person_rounded,
-                        color: darkGold,
-                        size: 30,
-                      );
-                    },
-                  )
-                      : const Icon(
+          Container(
+            height: 48,
+            width: 48,
+            decoration: const BoxDecoration(
+              color: Color(0xFFE9DFC9),
+              shape: BoxShape.circle,
+            ),
+            child: ClipOval(
+              child: photoUrl != null && photoUrl.isNotEmpty
+                  ? Image.network(
+                photoUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(
                     Icons.person_rounded,
                     color: darkGold,
                     size: 30,
-                  ),
-                ),
+                  );
+                },
+              )
+                  : const Icon(
+                Icons.person_rounded,
+                color: darkGold,
+                size: 30,
               ),
-              Positioned(
-                right: -2,
-                bottom: -1,
-                child: Container(
-                  height: 17,
-                  width: 17,
-                  decoration: const BoxDecoration(
-                    color: darkGold,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.settings,
-                    color: Colors.white,
-                    size: 10,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(

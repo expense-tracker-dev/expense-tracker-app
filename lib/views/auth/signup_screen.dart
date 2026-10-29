@@ -20,6 +20,7 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
   bool _verificationPending = false;
   bool _isCheckingVerification = false;
 
@@ -47,7 +48,6 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // DAILYDHAN LOGO - SAME ON BOTH SCREENS
   Widget _buildLogo() {
     return Center(
       child: Container(
@@ -95,7 +95,6 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // CREATE ACCOUNT AND SEND VERIFICATION EMAIL
   Future<void> _createAccount() async {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
@@ -166,7 +165,38 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  // CHECK EMAIL VERIFICATION
+  Future<void> _continueWithGoogle() async {
+    if (_isGoogleLoading || _isLoading) return;
+
+    setState(() {
+      _isGoogleLoading = true;
+    });
+
+    try {
+      await _authService.googleLogin();
+
+      if (!mounted) return;
+
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/home',
+            (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      _showMessage(
+        e.toString().replaceFirst('Exception: ', ''),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGoogleLoading = false;
+        });
+      }
+    }
+  }
+
   Future<void> _checkVerification() async {
     if (_isCheckingVerification) return;
 
@@ -207,7 +237,6 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  // RESEND VERIFICATION EMAIL
   Future<void> _resendVerification() async {
     if (_isLoading) return;
 
@@ -238,7 +267,6 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  // RETURN TO LOGIN
   Future<void> _returnToLogin() async {
     try {
       await _authService.logout();
@@ -258,7 +286,6 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // EMAIL VERIFICATION SCREEN
   Widget _buildVerificationScreen() {
     return Scaffold(
       backgroundColor: background,
@@ -270,9 +297,7 @@ class _SignupScreenState extends State<SignupScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 _buildLogo(),
-
                 const SizedBox(height: 24),
-
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -292,9 +317,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 14),
-
                 const Text(
                   'Verify Your Email',
                   textAlign: TextAlign.center,
@@ -306,9 +329,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     height: 1.2,
                   ),
                 ),
-
                 const SizedBox(height: 14),
-
                 Text(
                   'We sent a verification link to '
                       '${_emailController.text.trim()}.',
@@ -319,9 +340,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     height: 1.5,
                   ),
                 ),
-
                 const SizedBox(height: 10),
-
                 const Text(
                   'Open the email and tap the verification link. '
                       'Then return here and check your verification status.',
@@ -332,9 +351,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     height: 1.5,
                   ),
                 ),
-
                 const SizedBox(height: 26),
-
                 SizedBox(
                   height: 58,
                   width: double.infinity,
@@ -346,7 +363,8 @@ class _SignupScreenState extends State<SignupScreen> {
                       backgroundColor: gold,
                       foregroundColor: const Color(0xFF624900),
                       elevation: 3,
-                      shadowColor: Colors.brown.withValues(alpha: 0.16),
+                      shadowColor:
+                      Colors.brown.withValues(alpha: 0.16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(32),
                       ),
@@ -369,9 +387,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 14),
-
                 SizedBox(
                   height: 54,
                   width: double.infinity,
@@ -402,9 +418,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 18),
-
                 TextButton(
                   onPressed: _returnToLogin,
                   child: const Text(
@@ -447,11 +461,8 @@ class _SignupScreenState extends State<SignupScreen> {
                   child: Column(
                     children: [
                       const SizedBox(height: 30),
-
                       _buildLogo(),
-
                       const SizedBox(height: 18),
-
                       Center(
                         child: Container(
                           padding: const EdgeInsets.symmetric(
@@ -473,9 +484,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 10),
-
                       const Text(
                         'Create Your Account',
                         textAlign: TextAlign.center,
@@ -487,9 +496,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           height: 1.2,
                         ),
                       ),
-
                       const SizedBox(height: 18),
-
                       _buildLabel('Full Name'),
                       const SizedBox(height: 6),
                       _buildInput(
@@ -498,9 +505,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         icon: Icons.person_outline,
                         textCapitalization: TextCapitalization.words,
                       ),
-
                       const SizedBox(height: 12),
-
                       _buildLabel('Email Address'),
                       const SizedBox(height: 6),
                       _buildInput(
@@ -509,9 +514,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         icon: Icons.mail_outline,
                         keyboardType: TextInputType.emailAddress,
                       ),
-
                       const SizedBox(height: 12),
-
                       _buildLabel('Password'),
                       const SizedBox(height: 6),
                       _buildInput(
@@ -534,9 +537,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 6),
-
                       const Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -551,7 +552,8 @@ class _SignupScreenState extends State<SignupScreen> {
                           SizedBox(width: 7),
                           Expanded(
                             child: Text(
-                              'Minimum 8 characters with 1 number and 1 special symbol',
+                              'Minimum 8 characters with 1 number '
+                                  'and 1 special symbol',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: secondaryText,
@@ -561,9 +563,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 12),
-
                       _buildLabel('Confirm Password'),
                       const SizedBox(height: 6),
                       _buildInput(
@@ -587,14 +587,14 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 16),
-
                       SizedBox(
                         height: 58,
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: _isLoading ? null : _createAccount,
+                          onPressed: _isLoading || _isGoogleLoading
+                              ? null
+                              : _createAccount,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: gold,
                             foregroundColor: const Color(0xFF624900),
@@ -631,10 +631,85 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                         ),
                       ),
-
+                      const SizedBox(height: 16),
+                      const Row(
+                        children: [
+                          Expanded(
+                            child: Divider(color: Color(0xFFE8E1D4)),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 12),
+                            child: Text(
+                              'OR',
+                              style: TextStyle(
+                                color: secondaryText,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Divider(color: Color(0xFFE8E1D4)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        height: 54,
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed: _isGoogleLoading || _isLoading
+                              ? null
+                              : _continueWithGoogle,
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: textColor,
+                            side: const BorderSide(
+                              color: Color(0xFFE8E1D4),
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
+                          child: _isGoogleLoading
+                              ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: darkGold,
+                            ),
+                          )
+                              : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Image.asset(
+                                'assets/images/google.png',
+                                width: 22,
+                                height: 22,
+                                errorBuilder:
+                                    (context, error, stackTrace) {
+                                  return const Icon(
+                                    Icons.g_mobiledata,
+                                    size: 26,
+                                    color: Colors.blue,
+                                  );
+                                },
+                              ),
+                              const SizedBox(width: 12),
+                              const Text(
+                                'Continue with Google',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                       const Spacer(),
                       const SizedBox(height: 20),
-
                       Wrap(
                         alignment: WrapAlignment.center,
                         crossAxisAlignment: WrapCrossAlignment.center,
@@ -661,7 +736,6 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 12),
                     ],
                   ),
